@@ -1,0 +1,27 @@
+[
+  {
+    "nombre": "Corpus Divulgación Científica",
+    "archivo_json": "Corpus_Divulgación_Científica.json",
+    "archivo_graphml": "Corpus_Divulgación_Científica.graphml"
+  },
+  {
+    "nombre": "Corpus Violencia",
+    "archivo_json": "Corpus_Violencia.json",
+    "archivo_graphml": "Corpus_Violencia.graphml"
+  },
+  {
+    "nombre": "Corpus Chancroide",
+    "archivo_json": "Corpus_Chancroide.json",
+    "archivo_graphml": "Corpus_Chancroide.graphml"
+  },
+  {
+    "nombre": "Corpus Recetas",
+    "archivo_json": "Corpus_Recetas.json",
+    "archivo_graphml": "Corpus_Recetas.graphml"
+  },
+  {
+    "nombre": "Medicina",
+    "archivo_json": "Medicina.json",
+    "archivo_graphml": "Medicina.graphml"
+  }
+]
