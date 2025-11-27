@@ -23,5 +23,15 @@
     "nombre": "Medicina",
     "archivo_json": "Medicina.json",
     "archivo_graphml": "Medicina.graphml"
+  },
+  {
+    "nombre": "Covid",
+    "archivo_json": "Covid.json",
+    "archivo_graphml": "Covid.graphml"
+  },
+  {
+    "nombre": "MCD",
+    "archivo_json": "MCD.json",
+    "archivo_graphml": "MCD.graphml"
   }
 ]
