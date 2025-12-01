@@ -33,5 +33,10 @@
     "nombre": "MCD",
     "archivo_json": "MCD.json",
     "archivo_graphml": "MCD.graphml"
+  },
+  {
+    "nombre": "Medicina_01",
+    "archivo_json": "Medicina_01.json",
+    "archivo_graphml": "Medicina_01.graphml"
   }
 ]

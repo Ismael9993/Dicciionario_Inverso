@@ -16,7 +16,19 @@ from c3 import (
     cargar_diccionario,
 )
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
+url_prefix = ''
+with open('config.json', 'r') as f:
+    config = json.load(f)
+    url_prefix = config.get('url_prefix', '')
+
+if url_prefix:
+    static_url_path = '/' + url_prefix + '/static'
+else:
+    static_url_path = '/static'
+
+app = Flask(__name__, static_folder="static", static_url_path=static_url_path, template_folder="templates")
+if url_prefix:
+    app.config['APPLICATION_ROOT'] = url_prefix + '/'
 
 state = {
     "status": "idle",
@@ -148,25 +160,15 @@ def api_metadatos(corpus_id):
     }
     """
     try:
-        import requests
-        from c3 import BASE_URL, headers
-        url = f"{BASE_URL}{corpus_id}/tabla"
-        r = requests.get(url, headers=headers)
-        r.raise_for_status()
-        data = r.json()["data"]
+        from c3 import client
+        docs = client.docs_tabla(corpus_id)
 
-        metadatos = data.get("metadatos", [])
-        tabla = data.get("tabla", [])
+        metadatos = {}
+        for d in docs:
+            for metadato in d["metadata"]:
+                metadatos.setdefault(metadato, set()).add(d["metadata"][metadato])
 
-        resultado = []
-        for m in metadatos:
-            meta_id, meta_nombre, valores = m
-            vals = set()
-            for doc in tabla:
-                for mid, valor in doc[2]:
-                    if mid == meta_id and valor:
-                        vals.add(valor)
-            resultado.append({"nombre": meta_nombre, "valores": sorted(vals)})
+        resultado = [{"nombre": meta, "valores": sorted(valores)} for meta, valores in metadatos.items()]
 
         return jsonify({"ok": True, "data": resultado})
     except Exception as e:
