@@ -144,24 +144,51 @@ class TextProcessor:
         return texto
 
     def lematizar_con_spacy(self, texto):
-        """Lematización mejorada con spaCy si está disponible."""
-        if not nlp:
-            return self.lematizar_freeling_mejorado(texto)
-
-        doc = nlp(texto)
+        """
+        Lematización optimizada para textos largos (Chunking).
+        Divide el texto en bloques de 100,000 caracteres para evitar desbordamiento de memoria.
+        """
         tokens_procesados = []
 
-        for token in doc:
-            if not token.is_stop and not token.is_punct and len(token.text) > 2:
-                # Guardar lema con su POS tag para uso posterior
-                tokens_procesados.append({
-                    'lema': token.lemma_.lower(),
-                    'pos': token.pos_,
-                    'texto': token.text.lower()
-                })
+        # 1. Si NO tenemos spaCy, usamos un método manual simple para evitar fallos de API con textos gigantes
+        if not nlp:
+            print("Aviso: SpaCy no está cargado. Usando tokenización simple rápida.")
+            # Tokenización simple (split) para no saturar la API externa de Freeling con 3MB
+            palabras = texto.split()
+            for w in palabras:
+                if len(w) > 2 and w not in STOPWORDS:
+                    tokens_procesados.append({
+                        'lema': w, # Sin spaCy, el lema es la palabra misma
+                        'pos': 'UNK',
+                        'texto': w
+                    })
+            return tokens_procesados
+
+        # 2. Configurar spaCy para permitir textos más largos (por seguridad)
+        nlp.max_length = len(texto) + 50000
+
+        # 3. PROCESAMIENTO POR LOTES (Chunking)
+        # Procesamos de 100,000 en 100,000 caracteres para no saturar la RAM
+        tamano_lote = 100000 
+        
+        print(f"   > Procesando texto extenso ({len(texto)} chars) en bloques de {tamano_lote}...")
+        
+        for i in range(0, len(texto), tamano_lote):
+            # Cortar un pedazo del texto
+            lote = texto[i : i + tamano_lote]
+            
+            # Procesar ese pedazo
+            doc = nlp(lote)
+
+            for token in doc:
+                if not token.is_stop and not token.is_punct and len(token.text) > 2:
+                    tokens_procesados.append({
+                        'lema': token.lemma_.lower(),
+                        'pos': token.pos_,
+                        'texto': token.text.lower()
+                    })
 
         return tokens_procesados
-
     def lematizar_freeling_mejorado(self, texto):
         """Versión mejorada de lematización con FreeLing."""
         if texto in self.cache:
@@ -290,15 +317,35 @@ class ReverseDict:
 
     def _preparar_tfidf(self):
         """Preparar vectorizador TF-IDF para búsquedas."""
-        # Crear documentos para cada palabra usando sus contextos
+        # 1. Validación de seguridad: Si no hay palabras, salir sin error.
+        if not self.vocab:
+            self.tfidf = None
+            self.tfidf_matrix = None
+            return
+
+        # Crear documentos falsos basados en los contextos (vecinos)
         documentos = []
         for palabra in self.vocab:
             contexto = list(self.builder.word_contexts.get(palabra, [palabra]))
-            documentos.append(" ".join(contexto))
+            # Si el contexto está vacío, usamos la palabra misma para que no sea string vacío
+            texto = " ".join(contexto) if contexto else palabra
+            documentos.append(texto)
 
-        self.tfidf = TfidfVectorizer(max_features=1000, min_df=1, max_df=0.9)
-        self.tfidf_matrix = self.tfidf.fit_transform(documentos)
-
+        try:
+            # 2. SOLUCIÓN CLAVE: Cambiamos max_df a 1.0 (100%)
+            # Esto evita que elimine palabras incluso si aparecen en todos lados.
+            self.tfidf = TfidfVectorizer(
+                max_features=1000, 
+                min_df=1, 
+                max_df=1.0  # <--- CAMBIO IMPORTANTE: Antes era 0.9
+            )
+            self.tfidf_matrix = self.tfidf.fit_transform(documentos)
+            
+        except ValueError:
+            # Si aún así falla (ej. palabras de 1 letra que scikit borra), no rompemos la app
+            print("Advertencia: No se pudo generar matriz TF-IDF (vocabulario insuficiente).")
+            self.tfidf = None
+            self.tfidf_matrix = None
     def buscar_multiple_estrategias(self, definicion, top_k=15):
         """Búsqueda combinando múltiples estrategias."""
         # Procesar definición
@@ -762,6 +809,55 @@ def cargar_diccionario(nombre_diccionario):
     print(f"   Nodos: {len(G.nodes())}, Aristas: {len(G.edges())}")
 
     return G, processor, builder
+
+
+def eliminar_diccionario(nombre_diccionario):
+    """
+    Elimina los archivos asociados a un diccionario y lo saca del índice.
+    """
+    index_path = os.path.join(GRAPH_DIR, "diccionarios_index.json")
+    if not os.path.exists(index_path):
+        return False, "El índice de diccionarios no existe."
+
+    # 1. Leer el índice
+    with open(index_path, "r", encoding="utf-8") as f:
+        index = json.load(f)
+
+    # 2. Buscar la entrada
+    dic_entry = next((d for d in index if d["nombre"] == nombre_diccionario), None)
+    if not dic_entry:
+        return False, f"El diccionario '{nombre_diccionario}' no se encontró en el índice."
+
+    # 3. Eliminar archivos físicos
+    archivos_a_borrar = []
+    if "archivo_json" in dic_entry:
+        archivos_a_borrar.append(os.path.join(GRAPH_DIR, dic_entry["archivo_json"]))
+    if "archivo_graphml" in dic_entry:
+        archivos_a_borrar.append(os.path.join(GRAPH_DIR, dic_entry["archivo_graphml"]))
+    # Compatibilidad con versiones viejas que usaban la clave "archivo"
+    if "archivo" in dic_entry:
+        archivos_a_borrar.append(os.path.join(GRAPH_DIR, dic_entry["archivo"]))
+
+    errores = []
+    for ruta in archivos_a_borrar:
+        try:
+            if os.path.exists(ruta):
+                os.remove(ruta)
+        except Exception as e:
+            errores.append(str(e))
+
+    # 4. Actualizar y guardar el índice sin el diccionario borrado
+    index = [d for d in index if d["nombre"] != nombre_diccionario]
+    try:
+        with open(index_path, "w", encoding="utf-8") as f:
+            json.dump(index, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return False, f"Error al guardar el índice actualizado: {e}"
+
+    if errores:
+        return True, f"Diccionario eliminado del índice, pero hubo errores con archivos: {', '.join(errores)}"
+    
+    return True, f"Diccionario '{nombre_diccionario}' eliminado correctamente."
 
 
 # ---------------------------

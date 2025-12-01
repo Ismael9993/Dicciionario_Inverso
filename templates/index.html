@@ -1,104 +1,101 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row">
-  <div class="col-12">
-    <ul class="nav nav-tabs" id="mainTabs" role="tablist">
-      <li class="nav-item">
-        <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button">
-          Seleccionar corpus y procesar
-        </button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button">
-          Buscar por definición
-        </button>
-      </li>
-    </ul>
 
-    <div class="tab-content mt-3">
-      <!-- Pestaña 1 -->
-      <div class="tab-pane fade show active" id="tab1" role="tabpanel">
-        <div class="d-flex gap-3" id="container-main">
-          <!-- Izquierda: lista de corpus -->
-          <div class="card flex-fill" style="min-width: 220px; max-width: 320px;">
-            <div class="card-header">Corpus disponibles</div>
-            <div class="card-body overflow-auto" style="max-height: 60vh;">
-              <ul id="corpusList" class="list-group">
-                <!-- se llena con JS -->
-              </ul>
-            </div>
-          </div>
-
-          <!-- Medio: documentos del corpus -->
-          <div class="card flex-fill" style="min-width: 360px;">
-            <div class="card-header">Documentos en el corpus seleccionado</div>
-            <div class="card-body overflow-auto" style="max-height: 60vh;">
-              <div id="documentsContainer">
-                <p class="text-muted">Selecciona un corpus a la izquierda.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Derecha: botón y estado -->
-          <div class="card" style="min-width: 260px; max-width: 320px;">
-            <div class="card-header">Acciones</div>
-            <div class="card-body">
-              <div class="mb-3">
-                <label for="selectedCorpus" class="form-label">Corpus seleccionado</label>
-                <input type="text" id="selectedCorpus" class="form-control" readonly>
-              </div>
-              <div class="d-grid gap-2 mb-3">
-                <button id="processBtn" class="btn btn-success">Procesar archivos y generar grafo</button>
-              </div>
-              <div>
-                <label class="form-label">Estado del proceso</label>
-                <div id="statusBox" class="border rounded p-2 small">idle</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <!-- Pestaña 2 -->
-      <div class="tab-pane fade" id="tab2" role="tabpanel">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="card mb-3">
-              <div class="card-header">Diccionarios disponibles</div>
-              <div class="card-body">
-                <select id="diccionarioSelect" class="form-select mb-3"></select>
-                <button id="loadDiccionarioBtn" class="btn btn-outline-primary btn-sm">Cargar diccionario</button>
-                <div id="diccionarioStatus" class="small text-muted mt-2">Ninguno cargado</div>
-              </div>
-            </div>
-
-            <div class="card mb-3">
-              <div class="card-header">Grafo actual</div>
-              <div class="card-body">
-                <div id="graphSummary">Cargando grafo...</div>
-                <div id="graphView" style="height: 400px; border: 1px solid #ddd; margin-top:10px;"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-md-6">
-            <div class="card mb-3">
-              <div class="card-header">Buscar por definición</div>
-              <div class="card-body">
-                <textarea id="definitionInput" class="form-control mb-2" rows="4"
-                  placeholder="Introduce la definición..."></textarea>
-                <button id="searchBtn" class="btn btn-primary mb-3">Buscar</button>
-                <div>
-                  <h6>Resultados</h6>
-                  <ol id="resultsList"></ol>
+<div id="section-corpus" class="fade-in">
+    <div class="row">
+        <div class="col-md-3">
+             <div class="card h-100">
+                <div class="card-header">1. Seleccionar Corpus</div>
+                <div class="card-body p-0 overflow-auto" style="max-height: 70vh;">
+                    <ul id="corpusList" class="list-group list-group-flush"></ul>
                 </div>
-              </div>
-            </div>
-          </div>
+             </div>
         </div>
-      </div> <!-- end tab2 -->
+
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>2. Filtrar y Seleccionar Docs</span>
+                    <span class="badge bg-secondary" id="docCountBadge">0</span>
+                </div>
+                <div class="card-body overflow-auto" id="documentsContainer" style="max-height: 70vh;">
+                    <p class="text-muted text-center mt-5">Selecciona un corpus a la izquierda</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-white">
+                <div class="card-header text-success">3. Procesar</div>
+                <div class="card-body">
+                    <label class="form-label text-muted small">Corpus Activo</label>
+                    <input type="text" id="selectedCorpus" class="form-control mb-3 fw-bold" readonly placeholder="Ninguno">
+                    
+                    <div class="d-grid gap-2">
+                        <button id="processBtn" class="btn btn-success py-2">
+                            <i class="bi bi-gear-wide-connected"></i> Generar Diccionario
+                        </button>
+                    </div>
+                    
+                    <div id="statusBox" class="mt-3 small text-muted">Esperando acción...</div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3 small">
+                <i class="bi bi-info-circle"></i> Selecciona documentos para crear un nuevo grafo semántico basado en co-ocurrencia.
+            </div>
+        </div>
     </div>
-  </div>
 </div>
-{% endblock %}
+
+<div id="section-search" style="display: none;">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span><i class="bi bi-collection"></i> Biblioteca</span>
+                    <button class="btn btn-sm btn-outline-light" onclick="loadDiccionarios()"><i class="bi bi-arrow-clockwise"></i></button>
+                </div>
+                <div class="card-body bg-light overflow-auto" style="max-height: 80vh;">
+                    <div id="diccionariosListContainer" class="d-grid gap-3">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-4 shadow-sm border-primary">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-primary mb-3"><i class="bi bi-search"></i> Diccionario Inverso</h5>
+                    <div class="input-group input-group-lg">
+                        <textarea id="definitionInput" class="form-control" rows="2" placeholder="Escribe una definición (ej: 'Instrumento musical de cuerdas')..."></textarea>
+                        <button id="searchBtn" class="btn btn-primary px-4">Buscar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">Resultados</div>
+                        <div class="card-body p-0">
+                             <ol id="resultsList" class="list-group list-group-flush list-group-numbered"></ol>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">Estadísticas del Grafo</div>
+                        <div class="card-body">
+                             <div id="graphSummary" class="mb-2 text-muted small">Carga un diccionario...</div>
+                             <div id="graphView" class="border rounded p-2 bg-light" style="height: 250px; overflow: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}  

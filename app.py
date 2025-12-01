@@ -177,6 +177,7 @@ def api_metadatos(corpus_id):
 
 @app.route("/api/process", methods=["POST"])
 def api_process():
+    # 1. Recuperar datos
     data = request.get_json()
     corpus_id = data.get("corpus_id")
     doc_ids = data.get("doc_ids", [])
@@ -187,45 +188,66 @@ def api_process():
 
     try:
         state["status"] = "processing"
-        state["message"] = "Procesando documentos..."
-
+        state["message"] = f"Procesando {len(doc_ids)} documentos..."
+        
         processor = TextProcessor()
         builder = GraphBuilder(processor)
         textos = []
 
+        print(f"--- Iniciando procesamiento: {dic_name} ({len(doc_ids)} docs) ---")
+
         for doc_id in doc_ids:
+            # Descargar
             txt = descargar_documento(corpus_id, doc_id)
+            if not txt:
+                print(f"   [Advertencia] Doc {doc_id} está vacío o no se pudo descargar.")
+                continue
+
+            # Limpiar
             txt_clean = processor.limpiar_texto_avanzado(txt)
             textos.append(txt_clean)
 
+        # Unir y Lematizar
         texto_unido = " ".join(textos)
         tokens_procesados = processor.lematizar_con_spacy(texto_unido)
+        
+        # VALIDACIÓN DE SEGURIDAD (La mantenemos porque es vital)
+        if len(tokens_procesados) == 0:
+            msg_error = "El corpus resultante está vacío. Revisa que los documentos contengan texto válido en español."
+            print(f"Error: {msg_error}")
+            return jsonify({"ok": False, "error": msg_error}), 400
+
+        print(f"   > Tokens procesados totales: {len(tokens_procesados)}")
+
+        # Construir Grafo
         grafo = builder.construir_grafo_mejorado(tokens_procesados)
 
+        # Guardar
         from c3 import guardar_diccionario
         guardar_diccionario(dic_name, grafo, builder)
 
+        # Preparar búsqueda inversa
         reverse_dict = ReverseDict(grafo, processor, builder)
 
-        state.update(
-            {
-                "status": "done",
-                "message": f"Diccionario '{dic_name}' generado exitosamente.",
-                "current_graph": grafo,
-                "builder": builder,
-                "processor": processor,
-                "reverse_dict": reverse_dict,
-                "current_diccionario": dic_name,
-            }
-        )
+        # Actualizar estado global
+        state.update({
+            "status": "done",
+            "message": f"Diccionario '{dic_name}' creado exitosamente ({len(grafo.nodes)} nodos).",
+            "current_graph": grafo,
+            "builder": builder,
+            "processor": processor,
+            "reverse_dict": reverse_dict,
+            "current_diccionario": dic_name,
+        })
 
         graph_json = graph_to_json(grafo, top_n_nodes=500)
         return jsonify({"ok": True, "graph": graph_json, "message": state["message"]})
+
     except Exception as e:
+        print(f"ERROR EN PROCESO: {e}")
         state["status"] = "error"
         state["message"] = str(e)
         return jsonify({"ok": False, "error": str(e)}), 500
-
 
 # Listar diccionarios disponibles
 @app.route("/api/diccionarios", methods=["GET"])
@@ -268,6 +290,32 @@ def api_load_diccionario():
             "graph": graph_to_json(grafo, top_n_nodes=500),
         }
     )
+
+
+@app.route("/api/delete_diccionario", methods=["POST"])
+def api_delete_diccionario():
+    data = request.get_json()
+    nombre = data.get("nombre")
+    
+    if not nombre:
+        return jsonify({"ok": False, "error": "Falta el nombre del diccionario."}), 400
+
+    from c3 import eliminar_diccionario
+    success, message = eliminar_diccionario(nombre)
+
+    if success:
+        # Si el diccionario borrado era el actual en memoria, limpiamos el estado
+        if state.get("current_diccionario") == nombre:
+             state.update({
+                "current_graph": None,
+                "builder": None,
+                "processor": None,
+                "reverse_dict": None,
+                "current_diccionario": None,
+            })
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 500
 
 
 @app.route("/api/search", methods=["POST"])

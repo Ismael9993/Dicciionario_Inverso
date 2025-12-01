@@ -1,4 +1,124 @@
-body { background: #f8f9fa; }
-#container-main { align-items: stretch; }
-#corpusList .list-group-item { cursor: pointer; }
-#corpusList .list-group-item.active { background-color: #0d6efd; border-color: #0d6efd; color: white; }
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --accent-color: #2ecc71;
+    --bg-color: #f4f6f9;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    overflow-x: hidden;
+}
+
+/* Sidebar Styling */
+#wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh; /* Altura completa */
+}
+
+#sidebar-wrapper {
+    min-width: 250px;
+    max-width: 250px;
+    background-color: var(--secondary-color) !important;
+}
+
+.sidebar-heading {
+    padding: 1.5rem 1.25rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    background-color: rgba(0,0,0,0.1);
+}
+
+.list-group-item-dark {
+    background-color: var(--secondary-color);
+    color: #b8c7ce;
+    border: none;
+    transition: all 0.3s;
+}
+
+.list-group-item-dark:hover {
+    background-color: #34495e;
+    color: #fff;
+    padding-left: 1.5rem !important; /* Efecto de desplazamiento */
+}
+
+.list-group-item-dark.active {
+    background-color: #1abc9c; /* Verde azulado para activo */
+    color: white;
+    border-color: #1abc9c;
+    font-weight: 600;
+}
+
+/* Content Area */
+#page-content-wrapper {
+    width: 100%;
+    overflow-y: auto; /* Scroll solo en el contenido */
+}
+
+/* Tarjetas (Cards) Modernas */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.04); /* Sombra muy suave */
+    margin-bottom: 20px;
+    transition: transform 0.2s;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid #eee;
+    font-weight: 600;
+    color: #555;
+    padding: 1rem;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+/* Botones personalizados */
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+}
+
+.btn-success {
+    background-color: var(--accent-color);
+    border: none;
+    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.3);
+}
+
+/* Estilos específicos de tu app */
+.diccionario-card {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.diccionario-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+/* Borde izquierdo de color cuando es activo */
+.diccionario-card.active-card {
+    border-left-color: var(--accent-color);
+    background-color: #f0fdf4;
+}
+
+#graphView ul {
+    list-style: none;
+    padding: 0;
+}
+
+#resultsList .list-group-item {
+    border-left: 3px solid transparent;
+}
+#resultsList .list-group-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: var(--primary-color);
+}
